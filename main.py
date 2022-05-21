@@ -1,9 +1,14 @@
 
+from typing import Optional
 import pygame
 from pygame.locals import *
-from menu import Menu
+import pygame_menu
+import menu
 
 pygame.init()
-screen = pygame.display.set_mode((1920, 1080))
-menu = Menu(screen)
-menu.run()
+pygame.mixer.init()
+
+display = pygame.display.set_mode((1440,900))
+menu.main_menu = menu.menu_init()
+
+menu.main_menu.mainloop(display)

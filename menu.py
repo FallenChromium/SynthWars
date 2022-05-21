@@ -1,10 +1,22 @@
 import json
+from typing import Optional
 import pygame
-import level_map
+import level
 import pygame_menu
 import os
 
+# Constants and global variables
+ABOUT = [f'pygame-menu {pygame_menu.__version__}',
+         f'Author: {pygame_menu.__author__}',
+         f'Email: {pygame_menu.__email__}']
+FPS = 60
 
+#this is intended to be more of a persistent storage for the Main Menu and helper functions for it
+#because python files are evaluated only once upon import it makes sense to initialize the menu within the body of the module
+
+clock: Optional['pygame.time.Clock'] = None
+main_menu: Optional['pygame_menu.Menu'] = None 
+surface: Optional['pygame.Surface'] = None
 class MenuTheme(pygame_menu.Theme):
     def __init__(self) -> None:
         super().__init__()
@@ -29,72 +41,72 @@ class MenuTheme(pygame_menu.Theme):
         self.title_bar_style = pygame_menu.widgets.MENUBAR_STYLE_NONE
 
 
-class Menu:
-    def __init__(self, display) -> None:
-        self.display = display
-        self.theme = MenuTheme()
-        self.menu = pygame_menu.Menu('', 
-                pygame.display.Info().current_w,
-                pygame.display.Info().current_h,
-                theme=self.theme
-                )
-        self.menu.add.vertical_fill()
-        #self.menu.add.label("Synthwars", font_size=self.theme.title_font_size)
-        self.menu.add.image("assets/logo.png")
-        self.menu.add.vertical_fill()
-        self.menu.add.button('Levels', self._show_levels)
-        self.menu.add.vertical_fill()
-        self.menu.add.button('Score', self._show_score)
-        self.menu.add.vertical_fill()
-        self.menu.add.button('Help', self._show_help)
-        self.menu.add.vertical_fill()
-        self.menu.add.button('Quit', pygame.QUIT)
-        self.menu.add.vertical_margin(260)
+def menu_init():
+        global main_menu
+        menu = pygame_menu.Menu('', 
+           pygame.display.Info().current_w,
+           pygame.display.Info().current_h,
+           theme=MenuTheme(),
+           center_content=True,
+           )
+        menu.add.vertical_fill()
+        menu.add.image("assets/logo.png")
+        menu.add.vertical_fill()
+        menu.add.button('Levels', _levels())
+        menu.add.vertical_fill()
+        menu.add.button('Score', _score)
+        menu.add.vertical_fill()
+        menu.add.button('Help', _help)
+        menu.add.vertical_fill()
+        menu.add.button('Quit', pygame.QUIT)
+        menu.add.vertical_margin(260)
+        return menu
 
 
-    def run(self):
-        self.menu.mainloop(self.display)
+def _score():
+    pass
 
+def _help():
+    pass
 
-    def _show_score(self):
-        pass
-
-    def _show_help(self):
-        pass
-
-    def _show_levels(self):
-        level_menu = pygame_menu.Menu('',
-                pygame.display.Info().current_w,
-                pygame.display.Info().current_h,
-                theme=self.theme,
-                center_content=True
-                )
-        level_menu.add.button("Back to menu", level_menu.disable)
-        for level_folder in [f.path for f in os.scandir("levels") if f.is_dir()]:
-            with open(os.path.join(level_folder, "Info.dat")) as level_info:
-                level = json.load(level_info)
-                level_menu.add.button(level["_songName"] + " - " + level["_songAuthorName"], lambda x=level_folder: self._show_difficulty(x))
-
-        level_menu.mainloop(self.display) 
-
-    def _show_difficulty(self,level):
-        difficulty_menu = pygame_menu.Menu('Choose difficulty',
+def _levels():
+    level_menu = pygame_menu.Menu('',
             pygame.display.Info().current_w,
             pygame.display.Info().current_h,
-            theme=self.theme,
-            center_content=True
-        ) 
-        difficulty_menu.add.button("Back to menu", difficulty_menu.disable)
+            center_content=True,
+            theme=MenuTheme(),
+            )
+    level_menu.add.button("Back to menu", pygame_menu.events.BACK)
+    for level_folder in [f.path for f in os.scandir("levels") if f.is_dir()]:
+        with open(os.path.join(level_folder, "Info.dat")) as level_info:
+            level = json.load(level_info)
+            level_menu.add.button(level["_songName"] + " - " + level["_songAuthorName"], _difficulty(level_folder))
 
-        with open(os.path.join(level, "Info.dat"), 'r') as info:
-            level = json.load(info)
-            for beatmapSet in level["_difficultyBeatmapSets"]:
-                for beatmap in beatmapSet["_difficultyBeatmaps"]:
-                    difficulty_menu.add.button(
-                        beatmapSet["_beatmapCharacteristicName"] + " - " + beatmap["_difficulty"], 
-                        lambda x=beatmap: level_map.start_level(level, x["_beatmapFilename"])
-                    )
-        
-        difficulty_menu.mainloop(self.display) 
+    return level_menu
+
+def _difficulty(level_folder):
+    difficulty_menu = pygame_menu.Menu('Choose difficulty',
+        pygame.display.Info().current_w,
+        pygame.display.Info().current_h,
+        theme=MenuTheme(),
+        center_content=True
+    ) 
+    difficulty_menu.add.button("Back to menu", pygame_menu.events.BACK)
+
+    with open(os.path.join(level_folder, "Info.dat"), 'r') as info:
+        level_info = json.load(info)
+        for beatmapSet in level_info["_difficultyBeatmapSets"]:
+            for beatmap in beatmapSet["_difficultyBeatmaps"]:
+                difficulty_menu.add.button(
+                    beatmapSet["_beatmapCharacteristicName"] + " - " + beatmap["_difficulty"], 
+                    lambda x=beatmap, y=beatmapSet: play(level.Level(level_folder, y["_beatmapCharacteristicName"], x["_difficulty"] )))
+    
+    return difficulty_menu
+
+def play(level: level.Level):
+    main_menu.disable()
+    level.draw()
+    main_menu.enable()
+
 
         
