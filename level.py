@@ -60,7 +60,7 @@ class Level:
         self.hero_group.add(self.hero)
 
 
-    def draw(self):
+    def start(self):
         display = pygame.display.get_surface()
         pygame.mouse.set_visible(False)
 
@@ -78,7 +78,6 @@ class Level:
                     pygame.mixer.music.stop()
                     run = False
 
-            # shorten up the annoying function
             key_pressed = pygame.key.get_pressed()
 
             if self.hero.state == HeroStates.ATTACKING:
@@ -123,3 +122,4 @@ class Level:
             self.hero_group.draw(display)
             display.blit(total_score, (pygame.display.Info().current_w//2+10, 30))
             pygame.display.flip()
+        return self.hero.score
